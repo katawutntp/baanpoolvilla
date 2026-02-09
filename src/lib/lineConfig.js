@@ -1,4 +1,8 @@
 // LINE Configuration - centralized config
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  || process.env.NEXTAUTH_URL
+  || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+
 export const LINE_CONFIG = {
   // LINE Login OAuth
   loginChannelId: process.env.LINE_LOGIN_CHANNEL_ID || process.env.NEXT_PUBLIC_LINE_LOGIN_CHANNEL_ID,
@@ -12,7 +16,7 @@ export const LINE_CONFIG = {
   oaId: process.env.NEXT_PUBLIC_LINE_OA_ID || '@313mzore',
 
   // URLs
-  loginCallbackUrl: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/line/callback`,
+  loginCallbackUrl: `${siteUrl}/api/auth/line/callback`,
   lineOaUrl: `https://line.me/R/oaid/${process.env.NEXT_PUBLIC_LINE_OA_ID || '@313mzore'}`,
 };
 

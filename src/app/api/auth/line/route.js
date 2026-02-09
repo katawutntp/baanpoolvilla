@@ -4,6 +4,13 @@ import crypto from 'crypto';
 
 // GET /api/auth/line - Redirect ไป LINE Login Page
 export async function GET(request) {
+  if (!LINE_CONFIG.loginChannelId || !LINE_CONFIG.loginChannelSecret) {
+    return NextResponse.json(
+      { error: 'LINE Login config missing. Please set LINE_LOGIN_CHANNEL_ID and LINE_LOGIN_CHANNEL_SECRET.' },
+      { status: 500 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const rawRedirect = searchParams.get('redirect') || '/';
   let redirectTo = '/';
@@ -31,6 +38,7 @@ export async function GET(request) {
     redirect_uri: LINE_CONFIG.loginCallbackUrl,
     state: stateBase64,
     scope: 'profile openid',
+    bot_prompt: 'aggressive', // บังคับให้ต้อง Add Friend OA ก่อน Login
   });
 
   const lineLoginUrl = `${LINE_LOGIN_URL}?${params.toString()}`;

@@ -86,7 +86,8 @@ export async function GET(request) {
     );
 
     // 5. Redirect พร้อม set cookie
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL || request.url;
+    const requestOrigin = new URL(request.url).origin;
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL || requestOrigin;
     const response = NextResponse.redirect(new URL(redirectTo, baseUrl));
     response.cookies.set('line_token', token, {
       httpOnly: true,
