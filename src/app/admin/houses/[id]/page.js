@@ -18,6 +18,7 @@ export default function HouseFormPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: '',
+    slug: '',
     code: '',
     zone: 'pattaya',
     address: '',
@@ -45,6 +46,26 @@ export default function HouseFormPage() {
     sortOrder: 99999,
   });
 
+  const slugify = (value) => {
+    if (!value) return '';
+    return value
+      .toString()
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
+  };
+
+  const handleNameChange = (e) => {
+    const name = e.target.value;
+    setForm((prev) => ({
+      ...prev,
+      name,
+      slug: prev.slug ? prev.slug : slugify(name),
+    }));
+  };
+
   useEffect(() => {
     if (isEdit) {
       fetchHouse();
@@ -58,6 +79,7 @@ export default function HouseFormPage() {
         const data = await res.json();
         setForm({
           name: data.name || '',
+          slug: data.slug || '',
           code: data.code || '',
           zone: data.zone || 'pattaya',
           address: data.address || '',
@@ -175,11 +197,26 @@ export default function HouseFormPage() {
                   <input
                     type="text"
                     value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    onChange={handleNameChange}
                     placeholder="เช่น Pool Villa Pattaya 4 ห้องนอน"
                     className="input-field"
                     required
                   />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Slug (URL)</label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">/villas/</span>
+                    <input
+                      type="text"
+                      value={form.slug}
+                      onChange={(e) => setForm({ ...form, slug: e.target.value })}
+                      placeholder="เช่น tuscany-t1"
+                      className="input-field"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">ถ้าเว้นว่าง ระบบจะใช้รหัสในระบบแทน</p>
                 </div>
 
                 <div>

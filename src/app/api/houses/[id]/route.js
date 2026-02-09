@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getWebsiteHouseById, updateWebsiteHouse, deleteWebsiteHouse } from '@/lib/firebaseApi';
+import { getWebsiteHouseById, getWebsiteHouseBySlug, updateWebsiteHouse, deleteWebsiteHouse } from '@/lib/firebaseApi';
 
 export async function GET(request, { params }) {
   try {
-    const house = await getWebsiteHouseById(params.id);
+    let house = await getWebsiteHouseById(params.id);
+    if (!house) {
+      house = await getWebsiteHouseBySlug(params.id);
+    }
     if (!house) {
       return NextResponse.json({ error: 'House not found' }, { status: 404 });
     }

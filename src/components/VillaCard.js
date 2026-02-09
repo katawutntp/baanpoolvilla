@@ -17,8 +17,10 @@ export default function VillaCard({ villa }) {
     bangkok: 'กรุงเทพฯ',
   };
 
+  const villaPath = villa.slug ? `/villas/${villa.slug}` : `/villas/${villa.id}`;
+
   return (
-    <Link href={`/villas/${villa.id}`} className="group block">
+    <Link href={villaPath} className="group block">
       <div className="bg-white rounded-2xl overflow-hidden card-shadow">
         {/* Image */}
         <div className="relative h-64 overflow-hidden">

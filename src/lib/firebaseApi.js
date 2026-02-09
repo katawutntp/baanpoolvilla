@@ -25,6 +25,17 @@ const HOUSES_COLLECTION = 'houses';
 const WEBSITE_HOUSES_COLLECTION = 'website_houses';
 const COUNTERS_COLLECTION = 'counters';
 
+function normalizeSlug(value) {
+  if (!value) return '';
+  return value
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
 // ===== Counter Helper =====
 async function getNextId(counterName) {
   const counterRef = doc(db, COUNTERS_COLLECTION, counterName);
@@ -124,9 +135,27 @@ export async function getWebsiteHouseByCode(code) {
   }
 }
 
+export async function getWebsiteHouseBySlug(slug) {
+  try {
+    if (!slug) return null;
+    const ref2 = collection(db, WEBSITE_HOUSES_COLLECTION);
+    const q = query(ref2, where('slug', '==', slug));
+    const snapshot = await getDocs(q);
+    if (snapshot.docs.length > 0) {
+      const d = snapshot.docs[0];
+      return { id: d.id, ...d.data() };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting website house by slug:', error);
+    return null;
+  }
+}
+
 export async function createWebsiteHouse(data) {
   try {
     const ref2 = collection(db, WEBSITE_HOUSES_COLLECTION);
+    const normalizedSlug = normalizeSlug(data.slug || data.name || '');
     const newHouse = {
       ...data,
       images: data.images || [],
@@ -140,6 +169,7 @@ export async function createWebsiteHouse(data) {
       description: data.description || '',
       shortDescription: data.shortDescription || '',
       address: data.address || '',
+      slug: normalizedSlug,
       latitude: data.latitude || null,
       longitude: data.longitude || null,
       isActive: data.isActive !== false,
@@ -161,9 +191,15 @@ export async function createWebsiteHouse(data) {
 export async function updateWebsiteHouse(id, data) {
   try {
     const docRef = doc(db, WEBSITE_HOUSES_COLLECTION, id);
-    await updateDoc(docRef, {
+    const updateData = {
       ...data,
       updatedAt: serverTimestamp(),
+    };
+    if (data.slug !== undefined) {
+      updateData.slug = normalizeSlug(data.slug) || '';
+    }
+    await updateDoc(docRef, {
+      ...updateData,
     });
     const snap = await getDoc(docRef);
     return { id: snap.id, ...snap.data() };
