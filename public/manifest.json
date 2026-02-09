@@ -1,0 +1,9 @@
+{
+  "name": "BaanPoolVilla",
+  "short_name": "BaanPV",
+  "description": "จองบ้านพักพูลวิลล่า ราคาพิเศษ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#f97316"
+}

@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+:root {
+  --primary: #f97316;
+  --primary-dark: #ea580c;
+  --primary-light: #fed7aa;
+  --bg-dark: #1a1a2e;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Prompt', sans-serif;
+  color: #1a1a2e;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-500 hover:bg-primary-600 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg;
+  }
+
+  .btn-outline {
+    @apply border-2 border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white font-medium py-3 px-6 rounded-lg transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-lg transition-all duration-200;
+  }
+
+  .card-shadow {
+    @apply shadow-md hover:shadow-xl transition-shadow duration-300;
+  }
+
+  .section-title {
+    @apply text-3xl md:text-4xl font-bold text-dark-100;
+  }
+
+  .section-subtitle {
+    @apply text-gray-500 mt-2 text-lg;
+  }
+
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+  }
+
+  .badge-available {
+    @apply badge bg-green-100 text-green-800;
+  }
+
+  .badge-booked {
+    @apply badge bg-red-100 text-red-800;
+  }
+
+  .badge-pending {
+    @apply badge bg-yellow-100 text-yellow-800;
+  }
+}
+
+/* Calendar styles */
+.calendar-day {
+  @apply relative flex flex-col items-center justify-center h-12 w-12 rounded-lg cursor-pointer transition-all duration-150;
+}
+
+.calendar-day:hover {
+  @apply bg-primary-50;
+}
+
+.calendar-day.booked {
+  @apply bg-red-100 text-red-700 cursor-not-allowed;
+}
+
+.calendar-day.selected {
+  @apply bg-primary-500 text-white;
+}
+
+.calendar-day.in-range {
+  @apply bg-primary-100 text-primary-700;
+}
+
+.calendar-day.today {
+  @apply ring-2 ring-primary-400;
+}
+
+/* Swiper custom styles */
+.swiper-button-next,
+.swiper-button-prev {
+  color: white !important;
+  background: rgba(0, 0, 0, 0.4);
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50%;
+}
+
+.swiper-button-next::after,
+.swiper-button-prev::after {
+  font-size: 18px !important;
+  font-weight: bold;
+}
+
+.swiper-pagination-bullet-active {
+  background: #f97316 !important;
+}
+
+/* Admin sidebar */
+.admin-sidebar-link {
+  @apply flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-primary-50 hover:text-primary-600 transition-all duration-200;
+}
+
+.admin-sidebar-link.active {
+  @apply bg-primary-50 text-primary-600 font-medium;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Loading spinner */
+.spinner {
+  @apply animate-spin rounded-full border-4 border-gray-200 border-t-primary-500;
+}
+
+/* Image overlay on hover */
+.image-overlay {
+  @apply absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300;
+}
