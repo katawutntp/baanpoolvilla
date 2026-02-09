@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { createBooking, getAllBookings, updateBookingLineStatus } from '@/lib/firebaseBooking';
-import { sendBookingNotification } from '@/lib/lineService';
+import { sendBookingFlexMessage } from '@/lib/lineService';
 import { blockDatesForBooking } from '@/lib/calendarSync';
 
 // GET /api/bookings - ดึงรายการจองทั้งหมด (admin) หรือตาม villaId
@@ -95,9 +95,10 @@ export async function POST(request) {
           console.error('Friend check error:', e);
         }
 
-        // ส่ง text message
-        const textResult = await sendBookingNotification(user.lineId, {
+        // ส่ง Flex Message
+        const textResult = await sendBookingFlexMessage(user.lineId, {
           villaName: body.villaName,
+          villaImage: body.villaImage || '',
           checkIn: body.checkIn,
           checkOut: body.checkOut,
           nights: body.nights,

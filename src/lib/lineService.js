@@ -84,13 +84,15 @@ export async function sendBookingFlexMessage(userLineId, booking) {
     altText: `การจอง ${booking.villaName} - ${booking.checkIn}`,
     contents: {
       type: 'bubble',
-      hero: {
-        type: 'image',
-        url: booking.villaImage || 'https://via.placeholder.com/400x200',
-        size: 'full',
-        aspectRatio: '20:13',
-        aspectMode: 'cover',
-      },
+      ...(booking.villaImage && booking.villaImage.startsWith('https://') ? {
+        hero: {
+          type: 'image',
+          url: booking.villaImage,
+          size: 'full',
+          aspectRatio: '20:13',
+          aspectMode: 'cover',
+        },
+      } : {}),
       body: {
         type: 'box',
         layout: 'vertical',
