@@ -38,8 +38,7 @@ export async function GET(request) {
     redirect_uri: LINE_CONFIG.loginCallbackUrl,
     state: stateBase64,
     scope: 'profile openid',
-    prompt: 'consent', // บังคับแสดงหน้ายินยอมทุกครั้ง (แสดงปุ่ม Add Friend)
-    bot_prompt: 'aggressive', // แสดงหน้า Add Friend OA ก่อนหน้ายินยอม
+    bot_prompt: 'aggressive', // ครั้งแรก: แสดงหน้า Add Friend OA ก่อน consent / ครั้งต่อไป: ข้ามไปเลย
   });
 
   const lineLoginUrl = `${LINE_LOGIN_URL}?${params.toString()}`;
