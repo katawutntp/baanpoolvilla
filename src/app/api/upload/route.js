@@ -1,13 +1,6 @@
 import { NextResponse } from 'next/server';
 import { uploadHouseImage, deleteHouseImage } from '@/lib/firebaseApi';
 
-// เพิ่ม body size สำหรับรองรับไฟล์ใหญ่
- export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 export async function POST(request) {
   try {
     const formData = await request.formData();
