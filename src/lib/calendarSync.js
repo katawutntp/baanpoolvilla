@@ -64,6 +64,7 @@ export async function blockDatesForBooking(houseCode, checkIn, checkOut, status 
 
 /**
  * Release dates when booking is cancelled
+ * Preserves price data but removes booking status
  */
 export async function releaseDatesForBooking(houseCode, checkIn, checkOut) {
   const dates = getDateRange(checkIn, checkOut);
@@ -80,7 +81,13 @@ export async function releaseDatesForBooking(houseCode, checkIn, checkOut) {
   const prices = { ...(house.prices || {}) };
 
   for (const date of dates) {
-    delete prices[date];
+    if (prices[date]?.price && prices[date].price > 0) {
+      // ถ้ามีราคาอยู่ ให้เก็บราคาไว้แต่ลบ status/bookingId
+      prices[date] = { price: prices[date].price };
+    } else {
+      // ถ้าไม่มีราคา ลบทั้งหมด
+      delete prices[date];
+    }
   }
 
   await updateDoc(doc(db, HOUSES_COLLECTION, houseDoc.id), {

@@ -4,31 +4,93 @@ import { useState, useRef } from 'react';
 import { FiUpload, FiX, FiImage, FiTrash2, FiMove } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
-export default function ImageUploader({ images = [], onChange, houseId = 'temp' }) {
+export default function ImageUploader({ images = [], onChange, houseId = 'temp', maxImages = 30 }) {
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
   const fileInputRef = useRef(null);
+
+  // ย่อขนาดรูปก่อน upload เพื่อประหยัดพื้นที่
+  const compressImage = (file, maxWidth = 1920, quality = 0.85) => {
+    return new Promise((resolve) => {
+      // ถ้าไฟล์เล็กกว่า 500KB ไม่ต้องย่อ
+      if (file.size < 500 * 1024) {
+        resolve(file);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let { width, height } = img;
+
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+              } else {
+                resolve(file);
+              }
+            },
+            'image/jpeg',
+            quality
+          );
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
   const handleUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
+    const remaining = maxImages - images.length;
+    if (remaining <= 0) {
+      toast.error(`อัปโหลดได้สูงสุด ${maxImages} รูป`);
+      return;
+    }
+
+    const filesToUpload = files.slice(0, remaining);
+    if (files.length > remaining) {
+      toast(`เลือกอัปโหลดได้อีก ${remaining} รูป (จากที่เลือก ${files.length} รูป)`, { icon: '⚠️' });
+    }
+
     setUploading(true);
     const newImages = [...images];
+    let uploadedCount = 0;
 
-    for (const file of files) {
+    for (const file of filesToUpload) {
       if (!file.type.startsWith('image/')) {
         toast.error(`${file.name} ไม่ใช่ไฟล์รูปภาพ`);
         continue;
       }
 
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error(`${file.name} ขนาดเกิน 10MB`);
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error(`${file.name} ขนาดเกิน 20MB`);
         continue;
       }
 
       try {
+        setUploadProgress(`อัปโหลด ${++uploadedCount}/${filesToUpload.length}...`);
+
+        // ย่อรูปก่อน upload
+        const compressed = await compressImage(file);
+
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', compressed);
         formData.append('houseId', houseId);
 
         const res = await fetch('/api/upload', {
@@ -53,6 +115,7 @@ export default function ImageUploader({ images = [], onChange, houseId = 'temp' 
 
     onChange(newImages);
     setUploading(false);
+    setUploadProgress('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -86,7 +149,7 @@ export default function ImageUploader({ images = [], onChange, houseId = 'temp' 
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">
-        รูปภาพ ({images.length})
+        รูปภาพ ({images.length}/{maxImages})
       </label>
 
       {/* Image grid */}
@@ -148,13 +211,18 @@ export default function ImageUploader({ images = [], onChange, houseId = 'temp' 
         {uploading ? (
           <div>
             <div className="spinner w-8 h-8 mx-auto mb-2" />
-            <p className="text-gray-500">กำลังอัปโหลด...</p>
+            <p className="text-gray-500">{uploadProgress || 'กำลังอัปโหลด...'}</p>
+          </div>
+        ) : images.length >= maxImages ? (
+          <div>
+            <FiImage className="mx-auto text-gray-400 mb-2" size={32} />
+            <p className="text-gray-500 font-medium">ครบจำนวนสูงสุดแล้ว ({maxImages} รูป)</p>
           </div>
         ) : (
           <div>
             <FiUpload className="mx-auto text-gray-400 mb-2" size={32} />
-            <p className="text-gray-600 font-medium">คลิกเพื่ออัปโหลดรูปภาพ</p>
-            <p className="text-sm text-gray-400 mt-1">JPG, PNG, WebP (สูงสุด 10MB ต่อรูป)</p>
+            <p className="text-gray-600 font-medium">คลิกเพื่ออัปโหลดรูปภาพ (เลือกได้หลายรูป)</p>
+            <p className="text-sm text-gray-400 mt-1">JPG, PNG, WebP (สูงสุด 20MB ต่อรูป, อัปโหลดได้อีก {maxImages - images.length} รูป)</p>
           </div>
         )}
       </div>

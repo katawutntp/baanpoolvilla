@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { FiChevronLeft, FiChevronRight, FiLock, FiUnlock, FiRefreshCw } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiLock, FiUnlock, FiRefreshCw, FiDollarSign, FiEdit2 } from 'react-icons/fi';
 import {
   format,
   addMonths,
@@ -32,7 +32,9 @@ export default function AdminCalendarPage() {
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDates, setSelectedDates] = useState([]);
-  const [blockMode, setBlockMode] = useState('booked'); // 'booked' or 'available'
+  const [blockMode, setBlockMode] = useState('booked'); // 'booked', 'available', or 'price'
+  const [priceInput, setPriceInput] = useState('');
+  const [editingDate, setEditingDate] = useState(null); // for single-date price edit modal
 
   useEffect(() => {
     fetchHouses();
@@ -167,34 +169,109 @@ export default function AdminCalendarPage() {
     setSaving(true);
     try {
       const dateStrings = selectedDates.map((d) => format(d, 'yyyy-MM-dd'));
-      const res = await fetch('/api/calendar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+
+      // ถ้าโหมดตั้งราคา → ส่งราคาไปด้วย แต่ไม่เปลี่ยนสถานะ
+      if (blockMode === 'price') {
+        const priceNum = parseFloat(priceInput);
+        if (!priceNum || priceNum <= 0) {
+          toast.error('กรุณาระบุราคา');
+          setSaving(false);
+          return;
+        }
+        const res = await fetch('/api/calendar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code: selectedHouse.code,
+            dates: dateStrings,
+            status: 'price-only', // special mode: update price only
+            price: priceNum,
+          }),
+        });
+        const result = await res.json();
+        if (res.ok) {
+          toast.success(`ตั้งราคา ฿${priceNum.toLocaleString()} สำหรับ ${selectedDates.length} วัน`);
+          setBookingData(result.prices || {});
+          setSelectedDates([]);
+          setPriceInput('');
+        } else {
+          toast.error(result.error || 'เกิดข้อผิดพลาด');
+        }
+      } else {
+        // โหมดบล็อค / ปลดบล็อค
+        const payload = {
           code: selectedHouse.code,
           dates: dateStrings,
           status: blockMode,
-        }),
-      });
+        };
+        // ถ้ามีราคาที่ใส่ → ส่งไปด้วยตอนบล็อค
+        if (blockMode === 'booked' && priceInput) {
+          const priceNum = parseFloat(priceInput);
+          if (priceNum > 0) payload.price = priceNum;
+        }
 
-      const result = await res.json();
+        const res = await fetch('/api/calendar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
 
-      if (res.ok) {
-        toast.success(
-          blockMode === 'booked'
-            ? `บล็อค ${selectedDates.length} วันสำเร็จ`
-            : `ปลดบล็อค ${selectedDates.length} วันสำเร็จ`
-        );
-        setBookingData(result.prices || {});
-        setSelectedDates([]);
-      } else {
-        toast.error(result.error || 'เกิดข้อผิดพลาด');
+        const result = await res.json();
+
+        if (res.ok) {
+          toast.success(
+            blockMode === 'booked'
+              ? `บล็อค ${selectedDates.length} วันสำเร็จ`
+              : `ปลดบล็อค ${selectedDates.length} วันสำเร็จ`
+          );
+          setBookingData(result.prices || {});
+          setSelectedDates([]);
+        } else {
+          toast.error(result.error || 'เกิดข้อผิดพลาด');
+        }
       }
     } catch (err) {
       console.error('Block dates error:', err);
       toast.error('เกิดข้อผิดพลาด: ' + err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ตั้งราคาวันเดียว (double click)
+  const handleSingleDatePrice = async (newPrice) => {
+    if (!editingDate || !selectedHouse?.code) return;
+    setSaving(true);
+    try {
+      const priceNum = parseFloat(newPrice);
+      if (!priceNum || priceNum <= 0) {
+        toast.error('กรุณาระบุราคาที่ถูกต้อง');
+        setSaving(false);
+        return;
+      }
+      const dateStr = format(editingDate, 'yyyy-MM-dd');
+      const res = await fetch('/api/calendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: selectedHouse.code,
+          dates: [dateStr],
+          status: 'price-only',
+          price: priceNum,
+        }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        toast.success(`ตั้งราคา ฿${priceNum.toLocaleString()} สำหรับ ${format(editingDate, 'd MMM', { locale: th })}`);
+        setBookingData(result.prices || {});
+      } else {
+        toast.error(result.error || 'เกิดข้อผิดพลาด');
+      }
+    } catch (err) {
+      toast.error('เกิดข้อผิดพลาด');
+    } finally {
+      setSaving(false);
+      setEditingDate(null);
     }
   };
 
@@ -241,7 +318,7 @@ export default function AdminCalendarPage() {
 
               <div className="space-y-3">
                 {/* Mode selector */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-1">
                   <button
                     onClick={() => setBlockMode('booked')}
                     className={`p-2 text-xs rounded-lg font-medium flex items-center justify-center gap-1 ${
@@ -250,7 +327,7 @@ export default function AdminCalendarPage() {
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    <FiLock size={14} />
+                    <FiLock size={12} />
                     บล็อค
                   </button>
                   <button
@@ -261,10 +338,37 @@ export default function AdminCalendarPage() {
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    <FiUnlock size={14} />
-                    ปลดบล็อค
+                    <FiUnlock size={12} />
+                    ปลด
+                  </button>
+                  <button
+                    onClick={() => setBlockMode('price')}
+                    className={`p-2 text-xs rounded-lg font-medium flex items-center justify-center gap-1 ${
+                      blockMode === 'price'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <FiDollarSign size={12} />
+                    ราคา
                   </button>
                 </div>
+
+                {/* Price input (show for booked and price modes) */}
+                {(blockMode === 'booked' || blockMode === 'price') && (
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">
+                      {blockMode === 'price' ? 'ราคาต่อคืน (บาท) *' : 'ราคาต่อคืน (ถ้ามี)'}
+                    </label>
+                    <input
+                      type="number"
+                      value={priceInput}
+                      onChange={(e) => setPriceInput(e.target.value)}
+                      placeholder="เช่น 5000"
+                      className="w-full p-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-400"
+                    />
+                  </div>
+                )}
 
                 {/* Quick select buttons */}
                 <div className="space-y-2">
@@ -289,6 +393,8 @@ export default function AdminCalendarPage() {
                   className={`w-full p-3 rounded-lg font-medium text-white text-sm flex items-center justify-center gap-2 ${
                     blockMode === 'booked'
                       ? 'bg-red-500 hover:bg-red-600 disabled:bg-red-300'
+                      : blockMode === 'price'
+                      ? 'bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300'
                       : 'bg-green-500 hover:bg-green-600 disabled:bg-green-300'
                   }`}
                 >
@@ -296,9 +402,11 @@ export default function AdminCalendarPage() {
                     <div className="spinner w-4 h-4" />
                   ) : (
                     <>
-                      {blockMode === 'booked' ? <FiLock size={16} /> : <FiUnlock size={16} />}
+                      {blockMode === 'booked' ? <FiLock size={16} /> : blockMode === 'price' ? <FiDollarSign size={16} /> : <FiUnlock size={16} />}
                       {blockMode === 'booked'
                         ? `บล็อค ${selectedDates.length} วัน`
+                        : blockMode === 'price'
+                        ? `ตั้งราคา ${selectedDates.length} วัน`
                         : `ปลดบล็อค ${selectedDates.length} วัน`}
                     </>
                   )}
@@ -371,18 +479,20 @@ export default function AdminCalendarPage() {
                   <div className="grid grid-cols-7 gap-1">
                     {allCells.map((date, idx) => {
                       if (!date) {
-                        return <div key={`blank-${idx}`} className="h-16" />;
+                        return <div key={`blank-${idx}`} className="h-20" />;
                       }
 
                       const dateKey = getDateKey(date);
                       const status = getDayStatus(date);
+                      const dayData = bookingData[dateKey];
+                      const dayPrice = dayData?.price;
                       const booked = isBooked(date);
                       const isPast = isBefore(date, new Date()) && !isToday(date);
                       const selected = isSelected(date);
                       const today = isToday(date);
 
                       let dayClass =
-                        'h-16 flex flex-col items-center justify-center rounded-lg text-sm transition-all relative cursor-pointer ';
+                        'h-20 flex flex-col items-center justify-center rounded-lg text-sm transition-all relative cursor-pointer ';
 
                       if (isPast) {
                         dayClass += 'text-gray-300 cursor-not-allowed bg-gray-50';
@@ -390,6 +500,8 @@ export default function AdminCalendarPage() {
                         dayClass +=
                           blockMode === 'booked'
                             ? 'bg-red-500 text-white font-bold ring-2 ring-red-300'
+                            : blockMode === 'price'
+                            ? 'bg-blue-500 text-white font-bold ring-2 ring-blue-300'
                             : 'bg-green-500 text-white font-bold ring-2 ring-green-300';
                       } else if (isPendingDate(date)) {
                         dayClass += 'bg-yellow-50 text-yellow-600 font-medium';
@@ -406,20 +518,36 @@ export default function AdminCalendarPage() {
                           key={dateKey}
                           className={dayClass}
                           onClick={() => !isPast && toggleDate(date)}
+                          onDoubleClick={() => {
+                            if (!isPast) {
+                              setEditingDate(date);
+                              setPriceInput(dayPrice ? String(dayPrice) : '');
+                            }
+                          }}
+                          title={dayPrice ? `฿${dayPrice.toLocaleString()}/คืน` : 'ไม่มีราคา - ดับเบิ้ลคลิกเพื่อตั้งราคา'}
                         >
-                          <span>{format(date, 'd')}</span>
+                          <span className="font-medium">{format(date, 'd')}</span>
+                          {/* แสดงราคา */}
+                          {dayPrice && dayPrice > 0 && !selected && (
+                            <span className={`text-[9px] font-medium ${
+                              booked ? 'text-red-400' : isPendingDate(date) ? 'text-yellow-600' : 'text-blue-500'
+                            }`}>
+                              ฿{dayPrice >= 1000 ? `${(dayPrice / 1000).toFixed(dayPrice % 1000 === 0 ? 0 : 1)}k` : dayPrice}
+                            </span>
+                          )}
+                          {/* แสดงสถานะ */}
                           {isPendingDate(date) && !selected && (
-                            <span className="text-[10px] text-yellow-500">รอชำระ</span>
+                            <span className="text-[9px] text-yellow-500">รอชำระ</span>
                           )}
                           {booked && !isPendingDate(date) && !selected && (
-                            <span className="text-[10px] text-red-400">บล็อค</span>
+                            <span className="text-[9px] text-red-400">บล็อค</span>
                           )}
-                          {!booked && !isPast && !selected && (
-                            <span className="text-[10px] text-green-400">ว่าง</span>
+                          {!booked && !isPast && !selected && !isPendingDate(date) && (
+                            <span className="text-[9px] text-green-400">ว่าง</span>
                           )}
                           {selected && (
-                            <span className="text-[10px]">
-                              {blockMode === 'booked' ? '🔒' : '🔓'}
+                            <span className="text-[9px]">
+                              {blockMode === 'booked' ? '🔒' : blockMode === 'price' ? '💰' : '🔓'}
                             </span>
                           )}
                         </div>
@@ -442,12 +570,12 @@ export default function AdminCalendarPage() {
                       <span>บล็อค/จองแล้ว</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 bg-red-500 rounded" />
-                      <span>เลือกบล็อค</span>
+                      <span className="text-blue-500 text-xs font-bold">฿5k</span>
+                      <span>ราคา/คืน</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 bg-green-500 rounded" />
-                      <span>เลือกปลดบล็อค</span>
+                      <span className="text-xs">💡</span>
+                      <span>ดับเบิ้ลคลิก = ตั้งราคาวันเดียว</span>
                     </div>
                   </div>
                 </div>
@@ -460,6 +588,57 @@ export default function AdminCalendarPage() {
           )}
         </div>
       </div>
+
+      {/* Price Edit Modal (single date) */}
+      {editingDate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setEditingDate(null)}>
+          <div className="bg-white rounded-2xl p-6 w-80 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold text-lg mb-2">ตั้งราคา</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              {format(editingDate, 'd MMMM yyyy', { locale: th })}
+              {bookingData[getDateKey(editingDate)]?.status && (
+                <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
+                  bookingData[getDateKey(editingDate)]?.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                  bookingData[getDateKey(editingDate)]?.status === 'booked' ? 'bg-red-100 text-red-700' :
+                  'bg-gray-100 text-gray-600'
+                }`}>
+                  {bookingData[getDateKey(editingDate)]?.status}
+                </span>
+              )}
+            </p>
+            <div className="mb-4">
+              <label className="text-sm text-gray-600 mb-1 block">ราคาต่อคืน (บาท)</label>
+              <input
+                type="number"
+                value={priceInput}
+                onChange={(e) => setPriceInput(e.target.value)}
+                placeholder="เช่น 5000"
+                className="w-full p-3 border rounded-lg text-lg font-medium focus:ring-2 focus:ring-blue-300"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSingleDatePrice(priceInput);
+                  if (e.key === 'Escape') setEditingDate(null);
+                }}
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEditingDate(null)}
+                className="flex-1 p-2 bg-gray-100 rounded-lg text-sm hover:bg-gray-200"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={() => handleSingleDatePrice(priceInput)}
+                disabled={saving}
+                className="flex-1 p-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 disabled:bg-blue-300"
+              >
+                {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

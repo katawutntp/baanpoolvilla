@@ -9,7 +9,7 @@ import { formatPriceCurrency } from '@/lib/utils';
 import { useAuth } from '@/lib/authContext';
 import toast from 'react-hot-toast';
 
-export default function BookingForm({ villa, checkIn, checkOut }) {
+export default function BookingForm({ villa, checkIn, checkOut, bookingData = {} }) {
   const { user, loginWithLine } = useAuth();
   const [formData, setFormData] = useState({
     phone: '',
@@ -23,7 +23,28 @@ export default function BookingForm({ villa, checkIn, checkOut }) {
     ? Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24))
     : 0;
 
-  const totalPrice = nights * (villa?.pricePerNight || 0);
+  // คำนวณราคาจากปฏิทิน (Calendar) ถ้ามี หรือใช้ pricePerNight
+  const calculateTotalPrice = () => {
+    if (!checkIn || !checkOut || nights <= 0) return 0;
+    let total = 0;
+    let hasCalendarPrice = false;
+    const current = new Date(checkIn);
+    const end = new Date(checkOut);
+    while (current < end) {
+      const dateKey = current.toISOString().split('T')[0];
+      const dayData = bookingData[dateKey];
+      if (dayData?.price && dayData.price > 0) {
+        total += dayData.price;
+        hasCalendarPrice = true;
+      } else {
+        total += villa?.pricePerNight || 0;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    return total;
+  };
+
+  const totalPrice = calculateTotalPrice();
 
   const handleSubmit = async (e) => {
     e.preventDefault();

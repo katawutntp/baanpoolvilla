@@ -5,6 +5,12 @@ const nextConfig = {
     domains: ['firebasestorage.googleapis.com', 'localhost', 'profile.line-scdn.net', 'obs.line-scdn.net'],
     unoptimized: false,
   },
+  // เพิ่ม body size limit สำหรับ upload รูปภาพ
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
+  },
 }
 
 module.exports = nextConfig

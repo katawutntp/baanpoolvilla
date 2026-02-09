@@ -65,7 +65,18 @@ export async function POST(request) {
     // Update each date
     for (const date of dates) {
       if (status === 'available') {
-        delete prices[date];
+        // ปลดบล็อค: ถ้ามีราคาอยู่ ให้เก็บราคาไว้
+        if (prices[date]?.price && prices[date].price > 0) {
+          prices[date] = { price: prices[date].price };
+        } else {
+          delete prices[date];
+        }
+      } else if (status === 'price-only') {
+        // ตั้งราคาอย่างเดียว ไม่เปลี่ยนสถานะ
+        prices[date] = {
+          ...(prices[date] || {}),
+          price: price !== undefined ? price : (prices[date]?.price || null),
+        };
       } else {
         prices[date] = {
           price: price !== undefined ? price : (prices[date]?.price || null),

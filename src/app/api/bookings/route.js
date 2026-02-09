@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { createBooking, getAllBookings, updateBookingLineStatus } from '@/lib/firebaseBooking';
-import { sendBookingFlexMessage, sendBookingNotification } from '@/lib/lineService';
+import { sendBookingNotification } from '@/lib/lineService';
 import { blockDatesForBooking } from '@/lib/calendarSync';
 
 // GET /api/bookings - ดึงรายการจองทั้งหมด (admin) หรือตาม villaId
@@ -68,7 +68,7 @@ export async function POST(request) {
       }
     }
 
-    // 3. ส่ง LINE Message อัตโนมัติให้ลูกค้า
+    // 3. ส่ง LINE Message อัตโนมัติให้ลูกค้า (ส่ง text ก่อน เชื่อถือได้ 100%)
     let messageSent = false;
     try {
       if (!user.lineId) {
@@ -79,51 +79,31 @@ export async function POST(request) {
           error: 'Missing LINE userId',
         });
       } else {
-        const lineResult = await sendBookingFlexMessage(user.lineId, {
-        villaName: body.villaName,
-        villaImage: body.villaImage || '',
-        checkIn: body.checkIn,
-        checkOut: body.checkOut,
-        nights: body.nights,
-        guests: body.guests || 1,
-        totalPrice: body.totalPrice,
+        // ส่ง text message ก่อนเสมอ (เชื่อถือได้กว่า Flex)
+        const textResult = await sendBookingNotification(user.lineId, {
+          villaName: body.villaName,
+          checkIn: body.checkIn,
+          checkOut: body.checkOut,
+          nights: body.nights,
+          guests: body.guests || 1,
+          totalPrice: body.totalPrice,
         });
 
-        if (lineResult.success) {
+        if (textResult.success) {
           messageSent = true;
           await updateBookingLineStatus(booking.id, {
             sent: true,
-            status: lineResult.status,
-            requestId: lineResult.requestId,
+            status: textResult.status,
+            requestId: textResult.requestId,
             error: '',
           });
         } else {
-          // Fallback: ส่ง text ธรรมดาถ้า Flex ไม่ได้
-          const fallbackResult = await sendBookingNotification(user.lineId, {
-            villaName: body.villaName,
-            checkIn: body.checkIn,
-            checkOut: body.checkOut,
-            nights: body.nights,
-            guests: body.guests || 1,
-            totalPrice: body.totalPrice,
+          await updateBookingLineStatus(booking.id, {
+            sent: false,
+            status: textResult.status,
+            requestId: textResult.requestId,
+            error: JSON.stringify(textResult.error) || 'LINE push failed',
           });
-
-          if (fallbackResult.success) {
-            messageSent = true;
-            await updateBookingLineStatus(booking.id, {
-              sent: true,
-              status: fallbackResult.status,
-              requestId: fallbackResult.requestId,
-              error: '',
-            });
-          } else {
-            await updateBookingLineStatus(booking.id, {
-              sent: false,
-              status: fallbackResult.status || lineResult.status,
-              requestId: fallbackResult.requestId || lineResult.requestId,
-              error: fallbackResult.error || lineResult.error || 'Unknown LINE error',
-            });
-          }
         }
       }
     } catch (lineErr) {

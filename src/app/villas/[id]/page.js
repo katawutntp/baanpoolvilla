@@ -250,6 +250,7 @@ export default function VillaDetailPage() {
             <div className="lg:col-span-1">
               <BookingForm
                 villa={villa}
+                bookingData={bookingData}
                 checkIn={selectedDates.checkIn}
                 checkOut={selectedDates.checkOut}
               />

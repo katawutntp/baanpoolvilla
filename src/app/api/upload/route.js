@@ -1,18 +1,41 @@
 import { NextResponse } from 'next/server';
 import { uploadHouseImage, deleteHouseImage } from '@/lib/firebaseApi';
 
+// เพิ่ม body size สำหรับรองรับไฟล์ใหญ่
+ export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 export async function POST(request) {
   try {
     const formData = await request.formData();
-    const file = formData.get('file');
+    const files = formData.getAll('file');
     const houseId = formData.get('houseId') || 'temp';
 
-    if (!file) {
+    if (!files || files.length === 0) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    const result = await uploadHouseImage(file, houseId);
-    return NextResponse.json(result);
+    // รองรับหลายไฟล์พร้อมกัน
+    if (files.length === 1) {
+      const result = await uploadHouseImage(files[0], houseId);
+      return NextResponse.json(result);
+    }
+
+    // อัปโหลดหลายไฟล์
+    const results = [];
+    for (const file of files) {
+      try {
+        const result = await uploadHouseImage(file, houseId);
+        results.push(result);
+      } catch (err) {
+        console.error(`Upload failed for ${file.name}:`, err);
+        results.push({ error: `Upload failed: ${file.name}` });
+      }
+    }
+    return NextResponse.json({ results });
   } catch (error) {
     console.error('Error uploading:', error);
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
