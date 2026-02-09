@@ -154,6 +154,27 @@ export async function markBookingMessageSent(bookingId) {
   }
 }
 
+export async function updateBookingLineStatus(bookingId, status) {
+  try {
+    const docRef = doc(db, BOOKINGS_COLLECTION, bookingId);
+    const updateData = {
+      lineMessageSent: !!status.sent,
+      lineMessageStatus: status.status ?? null,
+      lineMessageRequestId: status.requestId || '',
+      lineMessageError: status.error || '',
+      updatedAt: serverTimestamp(),
+    };
+
+    if (status.sent) {
+      updateData.lineMessageSentAt = serverTimestamp();
+    }
+
+    await updateDoc(docRef, updateData);
+  } catch (error) {
+    console.error('Error updating LINE message status:', error);
+  }
+}
+
 // ดึง booking ทั้งหมด (กรองตาม villaId หรือ status ได้)
 export async function getAllBookings(filters = {}) {
   try {

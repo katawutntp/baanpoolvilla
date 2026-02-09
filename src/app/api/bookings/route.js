@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
-import { createBooking, markBookingMessageSent, getAllBookings } from '@/lib/firebaseBooking';
+import { createBooking, getAllBookings, updateBookingLineStatus } from '@/lib/firebaseBooking';
 import { sendBookingFlexMessage, sendBookingNotification } from '@/lib/lineService';
 import { blockDatesForBooking } from '@/lib/calendarSync';
 
@@ -71,7 +71,15 @@ export async function POST(request) {
     // 3. ส่ง LINE Message อัตโนมัติให้ลูกค้า
     let messageSent = false;
     try {
-      const lineResult = await sendBookingFlexMessage(user.lineId, {
+      if (!user.lineId) {
+        await updateBookingLineStatus(booking.id, {
+          sent: false,
+          status: 0,
+          requestId: '',
+          error: 'Missing LINE userId',
+        });
+      } else {
+        const lineResult = await sendBookingFlexMessage(user.lineId, {
         villaName: body.villaName,
         villaImage: body.villaImage || '',
         checkIn: body.checkIn,
@@ -79,28 +87,53 @@ export async function POST(request) {
         nights: body.nights,
         guests: body.guests || 1,
         totalPrice: body.totalPrice,
-      });
-
-      if (lineResult.success) {
-        messageSent = true;
-        await markBookingMessageSent(booking.id);
-      } else {
-        // Fallback: ส่ง text ธรรมดาถ้า Flex ไม่ได้
-        const fallbackResult = await sendBookingNotification(user.lineId, {
-          villaName: body.villaName,
-          checkIn: body.checkIn,
-          checkOut: body.checkOut,
-          nights: body.nights,
-          guests: body.guests || 1,
-          totalPrice: body.totalPrice,
         });
-        if (fallbackResult.success) {
+
+        if (lineResult.success) {
           messageSent = true;
-          await markBookingMessageSent(booking.id);
+          await updateBookingLineStatus(booking.id, {
+            sent: true,
+            status: lineResult.status,
+            requestId: lineResult.requestId,
+            error: '',
+          });
+        } else {
+          // Fallback: ส่ง text ธรรมดาถ้า Flex ไม่ได้
+          const fallbackResult = await sendBookingNotification(user.lineId, {
+            villaName: body.villaName,
+            checkIn: body.checkIn,
+            checkOut: body.checkOut,
+            nights: body.nights,
+            guests: body.guests || 1,
+            totalPrice: body.totalPrice,
+          });
+
+          if (fallbackResult.success) {
+            messageSent = true;
+            await updateBookingLineStatus(booking.id, {
+              sent: true,
+              status: fallbackResult.status,
+              requestId: fallbackResult.requestId,
+              error: '',
+            });
+          } else {
+            await updateBookingLineStatus(booking.id, {
+              sent: false,
+              status: fallbackResult.status || lineResult.status,
+              requestId: fallbackResult.requestId || lineResult.requestId,
+              error: fallbackResult.error || lineResult.error || 'Unknown LINE error',
+            });
+          }
         }
       }
     } catch (lineErr) {
       console.error('LINE send error (booking saved):', lineErr);
+      await updateBookingLineStatus(booking.id, {
+        sent: false,
+        status: 0,
+        requestId: '',
+        error: lineErr?.message || 'LINE send exception',
+      });
     }
 
     return NextResponse.json({

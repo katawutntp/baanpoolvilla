@@ -1,6 +1,20 @@
 import { LINE_CONFIG, LINE_PUSH_URL } from './lineConfig';
 import { formatPriceCurrency } from './utils';
 
+async function parseLineErrorResponse(response) {
+  try {
+    const text = await response.text();
+    if (!text) return null;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
+  } catch {
+    return null;
+  }
+}
+
 // ส่งข้อความการจองไปยังลูกค้าผ่าน LINE
 export async function sendBookingNotification(userLineId, booking) {
   const message = [
@@ -37,15 +51,29 @@ export async function sendBookingNotification(userLineId, booking) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('LINE Push API Error:', errorData);
-      return { success: false, error: errorData };
+      const errorData = await parseLineErrorResponse(response);
+      const requestId = response.headers.get('x-line-request-id') || '';
+      console.error('LINE Push API Error:', {
+        status: response.status,
+        requestId,
+        error: errorData,
+      });
+      return {
+        success: false,
+        status: response.status,
+        requestId,
+        error: errorData || 'LINE push failed',
+      };
     }
 
-    return { success: true };
+    return {
+      success: true,
+      status: response.status,
+      requestId: response.headers.get('x-line-request-id') || '',
+    };
   } catch (error) {
     console.error('LINE send message error:', error);
-    return { success: false, error: error.message };
+    return { success: false, status: 0, requestId: '', error: error.message };
   }
 }
 
@@ -184,15 +212,29 @@ export async function sendBookingFlexMessage(userLineId, booking) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('LINE Flex Message Error:', errorData);
-      return { success: false, error: errorData };
+      const errorData = await parseLineErrorResponse(response);
+      const requestId = response.headers.get('x-line-request-id') || '';
+      console.error('LINE Flex Message Error:', {
+        status: response.status,
+        requestId,
+        error: errorData,
+      });
+      return {
+        success: false,
+        status: response.status,
+        requestId,
+        error: errorData || 'LINE flex push failed',
+      };
     }
 
-    return { success: true };
+    return {
+      success: true,
+      status: response.status,
+      requestId: response.headers.get('x-line-request-id') || '',
+    };
   } catch (error) {
     console.error('LINE flex message error:', error);
-    return { success: false, error: error.message };
+    return { success: false, status: 0, requestId: '', error: error.message };
   }
 }
 
