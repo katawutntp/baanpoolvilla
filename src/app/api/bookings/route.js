@@ -68,8 +68,9 @@ export async function POST(request) {
       }
     }
 
-    // 3. ส่ง LINE Message อัตโนมัติให้ลูกค้า (ส่ง text ก่อน เชื่อถือได้ 100%)
+    // 3. ส่ง LINE Message อัตโนมัติให้ลูกค้า
     let messageSent = false;
+    let friendStatus = 'unknown';
     try {
       if (!user.lineId) {
         await updateBookingLineStatus(booking.id, {
@@ -79,7 +80,22 @@ export async function POST(request) {
           error: 'Missing LINE userId',
         });
       } else {
-        // ส่ง text message ก่อนเสมอ (เชื่อถือได้กว่า Flex)
+        // ตรวจสอบว่า user เป็นเพื่อน OA หรือไม่ (ผ่าน Messaging API Get Profile)
+        try {
+          const profileCheck = await fetch(`https://api.line.me/v2/bot/profile/${user.lineId}`, {
+            headers: { Authorization: `Bearer ${process.env.LINE_MESSAGING_CHANNEL_ACCESS_TOKEN}` },
+          });
+          if (profileCheck.ok) {
+            friendStatus = 'friend';
+          } else {
+            friendStatus = 'not-friend';
+            console.warn('User is NOT a friend of OA:', user.lineId, profileCheck.status);
+          }
+        } catch (e) {
+          console.error('Friend check error:', e);
+        }
+
+        // ส่ง text message
         const textResult = await sendBookingNotification(user.lineId, {
           villaName: body.villaName,
           checkIn: body.checkIn,
@@ -90,12 +106,13 @@ export async function POST(request) {
         });
 
         if (textResult.success) {
-          messageSent = true;
+          messageSent = friendStatus === 'friend'; // 200 แต่ไม่ใช่เพื่อน = ไม่ส่งจริง
           await updateBookingLineStatus(booking.id, {
-            sent: true,
+            sent: friendStatus === 'friend',
             status: textResult.status,
             requestId: textResult.requestId,
-            error: '',
+            error: friendStatus === 'not-friend' ? 'API 200 but user not friend of OA - message not delivered' : '',
+            friendStatus,
           });
         } else {
           await updateBookingLineStatus(booking.id, {
@@ -103,6 +120,7 @@ export async function POST(request) {
             status: textResult.status,
             requestId: textResult.requestId,
             error: JSON.stringify(textResult.error) || 'LINE push failed',
+            friendStatus,
           });
         }
       }
@@ -123,6 +141,7 @@ export async function POST(request) {
         status: 'pending',
       },
       lineMessageSent: messageSent,
+      friendStatus,
       lineOaUrl: `https://line.me/R/oaid/${process.env.NEXT_PUBLIC_LINE_OA_ID || '@313mzore'}`,
     });
   } catch (error) {

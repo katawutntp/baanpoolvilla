@@ -27,12 +27,20 @@ export async function upsertLineUser(lineProfile) {
     if (snapshot.docs.length > 0) {
       // อัปเดต user ที่มีอยู่
       const existingDoc = snapshot.docs[0];
-      await updateDoc(doc(db, USERS_COLLECTION, existingDoc.id), {
+      const updateData = {
         displayName: lineProfile.displayName,
         pictureUrl: lineProfile.pictureUrl || '',
         lastLoginAt: serverTimestamp(),
-      });
-      return { id: existingDoc.id, ...existingDoc.data(), displayName: lineProfile.displayName };
+      };
+      // บันทึกสถานะเพื่อน OA
+      if (lineProfile.isFriend !== undefined) {
+        updateData.isFriend = lineProfile.isFriend;
+      }
+      if (lineProfile.friendshipChanged !== undefined) {
+        updateData.friendshipChanged = lineProfile.friendshipChanged;
+      }
+      await updateDoc(doc(db, USERS_COLLECTION, existingDoc.id), updateData);
+      return { id: existingDoc.id, ...existingDoc.data(), ...updateData };
     } else {
       // สร้าง user ใหม่
       const newUser = {
@@ -40,6 +48,8 @@ export async function upsertLineUser(lineProfile) {
         displayName: lineProfile.displayName,
         pictureUrl: lineProfile.pictureUrl || '',
         statusMessage: lineProfile.statusMessage || '',
+        isFriend: lineProfile.isFriend || false,
+        friendshipChanged: lineProfile.friendshipChanged || false,
         phoneNumber: '',
         email: '',
         createdAt: serverTimestamp(),
@@ -164,6 +174,10 @@ export async function updateBookingLineStatus(bookingId, status) {
       lineMessageError: status.error || '',
       updatedAt: serverTimestamp(),
     };
+
+    if (status.friendStatus) {
+      updateData.lineFriendStatus = status.friendStatus;
+    }
 
     if (status.sent) {
       updateData.lineMessageSentAt = serverTimestamp();

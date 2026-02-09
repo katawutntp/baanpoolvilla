@@ -136,6 +136,27 @@ export default function BookingForm({ villa, checkIn, checkOut, bookingData = {}
             </p>
           </div>
 
+          {/* แจ้งเตือนถ้ายังไม่ได้แอดเพื่อน OA */}
+          {bookingSuccess.friendStatus === 'not-friend' && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+              <p className="text-sm font-semibold text-red-700 mb-2">
+                ⚠️ กรุณาเพิ่มเพื่อน LINE OA
+              </p>
+              <p className="text-xs text-red-600 mb-3">
+                เพื่อรับข้อมูลการจองและสถานะผ่าน LINE
+              </p>
+              <a
+                href={bookingSuccess.lineOaUrl || 'https://line.me/R/oaid/@313mzore'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-[#06C755] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#05b04c] transition-colors"
+              >
+                <FaLine size={16} />
+                เพิ่มเพื่อน @TestBPV
+              </a>
+            </div>
+          )}
+
           <button
             onClick={() => setBookingSuccess(null)}
             className="text-sm text-gray-400 hover:text-gray-600 transition-colors"

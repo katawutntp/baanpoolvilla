@@ -58,6 +58,12 @@ export async function GET(request) {
 
     const tokenData = await tokenRes.json();
 
+    // Log friendship status change (bot_prompt result)
+    console.log('LINE Login token response:', {
+      friendship_status_changed: tokenData.friendship_status_changed,
+      scope: tokenData.scope,
+    });
+
     // 2. ดึง profile ด้วย access token
     const profileRes = await fetch(LINE_PROFILE_URL, {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
@@ -70,8 +76,27 @@ export async function GET(request) {
 
     const profile = await profileRes.json();
 
-    // 3. สร้างหรืออัปเดต user ใน Firebase
-    const user = await upsertLineUser(profile);
+    // 2.5 ตรวจสอบว่า user เป็นเพื่อนกับ OA หรือยัง
+    let isFriend = false;
+    try {
+      const friendRes = await fetch('https://api.line.me/friendship/v1/status', {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+      if (friendRes.ok) {
+        const friendData = await friendRes.json();
+        isFriend = friendData.friendFlag === true;
+        console.log('LINE Friendship status:', friendData);
+      }
+    } catch (e) {
+      console.error('Friendship check error:', e);
+    }
+
+    // 3. สร้างหรืออัปเดต user ใน Firebase (พร้อมสถานะเพื่อน)
+    const user = await upsertLineUser({
+      ...profile,
+      isFriend,
+      friendshipChanged: tokenData.friendship_status_changed,
+    });
 
     // 4. สร้าง JWT token
     const token = jwt.sign(

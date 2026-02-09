@@ -38,7 +38,8 @@ export async function GET(request) {
     redirect_uri: LINE_CONFIG.loginCallbackUrl,
     state: stateBase64,
     scope: 'profile openid',
-    bot_prompt: 'aggressive', // บังคับให้ต้อง Add Friend OA ก่อน Login
+    prompt: 'consent', // บังคับแสดงหน้ายินยอมทุกครั้ง (แสดงปุ่ม Add Friend)
+    bot_prompt: 'aggressive', // แสดงหน้า Add Friend OA ก่อนหน้ายินยอม
   });
 
   const lineLoginUrl = `${LINE_LOGIN_URL}?${params.toString()}`;
