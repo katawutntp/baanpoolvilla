@@ -8,7 +8,7 @@ import VillaGallery from '@/components/VillaGallery';
 import BookingCalendar from '@/components/BookingCalendar';
 import BookingForm from '@/components/BookingForm';
 import { PageLoading } from '@/components/LoadingSpinner';
-import { FiMapPin, FiUsers, FiHome, FiCheck, FiChevronRight } from 'react-icons/fi';
+import { FiMapPin, FiUsers, FiHome, FiCheck, FiChevronRight, FiSend } from 'react-icons/fi';
 import { BiBath } from 'react-icons/bi';
 import { formatPriceCurrency, getAmenityInfo } from '@/lib/utils';
 import Link from 'next/link';
@@ -163,6 +163,23 @@ export default function VillaDetailPage() {
                   onDateSelect={handleDateSelect}
                   selectable={true}
                 />
+
+                {/* Mobile book button - แสดงเฉพาะบนมือถือ */}
+                <div className="mt-4 lg:hidden">
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById('booking-form');
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                    className="w-full bg-primary-500 hover:bg-primary-600 text-white font-bold py-4 rounded-xl text-lg transition-colors shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <FiSend size={20} />
+                    {selectedDates.checkIn && selectedDates.checkOut
+                      ? `จองเลย ${Math.ceil((selectedDates.checkOut - selectedDates.checkIn) / (1000*60*60*24))} คืน`
+                      : 'จองบ้านพักนี้'
+                    }
+                  </button>
+                </div>
               </div>
 
               {/* Description */}
@@ -247,7 +264,7 @@ export default function VillaDetailPage() {
             </div>
 
             {/* Right: Booking sidebar */}
-            <div className="lg:col-span-1">
+            <div id="booking-form" className="lg:col-span-1">
               <BookingForm
                 villa={villa}
                 bookingData={bookingData}
