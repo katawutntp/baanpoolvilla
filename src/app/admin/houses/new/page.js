@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import ImageUploader from '@/components/admin/ImageUploader';
+import CategorizedImageUploader from '@/components/admin/CategorizedImageUploader';
 import { ZONES, AMENITIES_LIST } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { FiSave, FiArrowLeft } from 'react-icons/fi';
@@ -262,7 +262,7 @@ export default function NewHousePage() {
             {/* Images */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
               <h2 className="text-lg font-bold mb-4">รูปภาพ</h2>
-              <ImageUploader
+              <CategorizedImageUploader
                 images={form.images}
                 onChange={(images) => setForm({ ...form, images })}
                 houseId="temp"

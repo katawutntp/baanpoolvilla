@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { FiUpload, FiX, FiImage, FiTrash2, FiMove } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
-export default function ImageUploader({ images = [], onChange, houseId = 'temp', maxImages = 30 }) {
+export default function ImageUploader({ images = [], onChange, houseId = 'temp', maxImages = 30, category = '', label = '' }) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
   const fileInputRef = useRef(null);
@@ -104,6 +104,7 @@ export default function ImageUploader({ images = [], onChange, houseId = 'temp',
             url: data.url,
             storagePath: data.storagePath,
             name: file.name,
+            ...(category ? { category } : {}),
           });
         } else {
           const errData = await res.json().catch(() => ({}));
@@ -151,7 +152,7 @@ export default function ImageUploader({ images = [], onChange, houseId = 'temp',
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">
-        รูปภาพ ({images.length}/{maxImages})
+        {label || 'รูปภาพ'} ({images.length}/{maxImages})
       </label>
 
       {/* Image grid */}
