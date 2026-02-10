@@ -168,6 +168,7 @@ export default function ImageUploader({ images = [], onChange, houseId = 'temp',
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                 {idx > 0 && (
                   <button
+                    type="button"
                     onClick={() => moveImage(idx, idx - 1)}
                     className="p-2 bg-white rounded-full text-gray-700 hover:bg-gray-100"
                     title="เลื่อนไปซ้าย"
@@ -176,6 +177,7 @@ export default function ImageUploader({ images = [], onChange, houseId = 'temp',
                   </button>
                 )}
                 <button
+                  type="button"
                   onClick={() => handleRemove(idx)}
                   className="p-2 bg-red-500 rounded-full text-white hover:bg-red-600"
                   title="ลบ"
@@ -184,6 +186,7 @@ export default function ImageUploader({ images = [], onChange, houseId = 'temp',
                 </button>
                 {idx < images.length - 1 && (
                   <button
+                    type="button"
                     onClick={() => moveImage(idx, idx + 1)}
                     className="p-2 bg-white rounded-full text-gray-700 hover:bg-gray-100"
                     title="เลื่อนไปขวา"
