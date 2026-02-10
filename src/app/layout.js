@@ -6,6 +6,10 @@ export const metadata = {
   title: 'BaanPoolVilla - จองบ้านพักพูลวิลล่า',
   description: 'บริการจองบ้านพักพูลวิลล่า ราคาพิเศษ พัทยา หัวหิน เขาใหญ่ และทั่วประเทศ สระว่ายน้ำส่วนตัว',
   keywords: 'พูลวิลล่า, pool villa, บ้านพัก, จองบ้านพัก, พัทยา, หัวหิน, เขาใหญ่',
+  icons: {
+    icon: '/icon.png',
+    apple: '/icon.png',
+  },
   openGraph: {
     title: 'BaanPoolVilla - จองบ้านพักพูลวิลล่า',
     description: 'บริการจองบ้านพักพูลวิลล่า ราคาพิเศษ สระว่ายน้ำส่วนตัว',
