@@ -235,11 +235,18 @@ export async function deleteWebsiteHouse(id) {
 // ===== Image Upload =====
 export async function uploadHouseImage(file, houseId) {
   try {
+    if (!storage) {
+      throw new Error('Firebase storage is not initialized');
+    }
     const timestamp = Date.now();
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const storagePath = `website_houses/${houseId}/${timestamp}_${safeName}`;
     const storageRef = ref(storage, storagePath);
-    const snapshot = await uploadBytes(storageRef, file);
+    const payload = typeof file.arrayBuffer === 'function'
+      ? new Uint8Array(await file.arrayBuffer())
+      : file;
+    const metadata = file?.type ? { contentType: file.type } : undefined;
+    const snapshot = await uploadBytes(storageRef, payload, metadata);
     const url = await getDownloadURL(snapshot.ref);
     return { url, storagePath };
   } catch (error) {

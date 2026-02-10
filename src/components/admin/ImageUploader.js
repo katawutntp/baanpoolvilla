@@ -106,10 +106,12 @@ export default function ImageUploader({ images = [], onChange, houseId = 'temp',
             name: file.name,
           });
         } else {
-          toast.error(`อัปโหลด ${file.name} ล้มเหลว`);
+          const errData = await res.json().catch(() => ({}));
+          const details = errData?.details || errData?.error || 'Unknown error';
+          toast.error(`อัปโหลด ${file.name} ล้มเหลว: ${details}`);
         }
       } catch (err) {
-        toast.error(`อัปโหลด ${file.name} ล้มเหลว`);
+        toast.error(`อัปโหลด ${file.name} ล้มเหลว: ${err?.message || 'Unknown error'}`);
       }
     }
 
