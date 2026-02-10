@@ -3,7 +3,7 @@
 import ImageUploader from './ImageUploader';
 
 const IMAGE_CATEGORIES = [
-  { key: 'cover', label: 'ภาพปก', icon: '🏠', max: 1 },
+  { key: 'cover', label: 'ภาพปก', icon: '🏠', max: 3 },
   { key: 'exterior', label: 'ภายนอก', icon: '🌳', max: 10 },
   { key: 'living', label: 'ห้องนั่งเล่น', icon: '🛋️', max: 10 },
   { key: 'bedroom', label: 'ห้องนอน', icon: '🛏️', max: 10 },

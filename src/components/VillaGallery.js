@@ -3,151 +3,174 @@
 import { useState } from 'react';
 import { FiChevronLeft, FiChevronRight, FiMaximize2, FiX } from 'react-icons/fi';
 
-const GALLERY_TABS = [
-  { key: 'all', label: 'ทั้งหมด' },
-  { key: 'cover', label: '🏠 ภาพปก' },
-  { key: 'exterior', label: '🌳 ภายนอก' },
-  { key: 'living', label: '🛋️ ห้องนั่งเล่น' },
-  { key: 'bedroom', label: '🛏️ ห้องนอน' },
-  { key: 'kitchen', label: '🍳 ห้องครัว' },
-  { key: 'bathroom', label: '🚿 ห้องน้ำ' },
+const CATEGORY_INFO = [
+  { key: 'cover', label: 'ภาพปก', icon: '🏠' },
+  { key: 'exterior', label: 'ภายนอก', icon: '🌳' },
+  { key: 'living', label: 'ห้องนั่งเล่น', icon: '🛋️' },
+  { key: 'bedroom', label: 'ห้องนอน', icon: '🛏️' },
+  { key: 'kitchen', label: 'ห้องครัว', icon: '🍳' },
+  { key: 'bathroom', label: 'ห้องน้ำ', icon: '🚿' },
 ];
 
 export default function VillaGallery({ images = [] }) {
+  const [fullscreenImages, setFullscreenImages] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [activeTab, setActiveTab] = useState('all');
 
   const defaultImages = [
-    { url: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&q=80' },
-    { url: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=80' },
-    { url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=80' },
+    { url: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&q=80', category: 'cover' },
+    { url: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=80', category: 'exterior' },
+    { url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=80', category: 'exterior' },
   ];
 
   const allImgs = images.length > 0 ? images : defaultImages;
-
-  // เรียงลำดับ: cover ก่อน แล้วตาม category
-  const categoryOrder = ['cover', 'exterior', 'living', 'bedroom', 'kitchen', 'bathroom', ''];
-  const sortedAllImgs = [...allImgs].sort((a, b) => {
-    const aIdx = categoryOrder.indexOf(a.category || '');
-    const bIdx = categoryOrder.indexOf(b.category || '');
-    return aIdx - bIdx;
-  });
-
-  // Filter by active tab
-  const filteredImgs = activeTab === 'all'
-    ? sortedAllImgs
-    : sortedAllImgs.filter((img) => img.category === activeTab);
-
-  // Tab ที่มีรูป
-  const availableTabs = GALLERY_TABS.filter((tab) => {
-    if (tab.key === 'all') return true;
-    return allImgs.some((img) => img.category === tab.key);
-  });
-
-  // ถ้าไม่มี category เลย (รูปเก่า) ไม่แสดง tabs
   const hasCategories = allImgs.some((img) => img.category);
 
-  const imgs = filteredImgs.length > 0 ? filteredImgs : sortedAllImgs;
+  // แยกรูปตามหมวดหมู่
+  const getByCategory = (cat) => allImgs.filter((img) => img.category === cat);
+  const uncategorized = allImgs.filter((img) => !img.category);
 
-  const goNext = () => setCurrentIndex((i) => (i + 1) % imgs.length);
-  const goPrev = () => setCurrentIndex((i) => (i - 1 + imgs.length) % imgs.length);
+  // ถ้าไม่มี category เลย → ใช้แบบเดิม (legacy)
+  const coverImgs = hasCategories ? getByCategory('cover') : allImgs.slice(0, 3);
 
-  const openFullscreen = (idx) => {
+  const goNext = () => setFullscreenImages((imgs) => { setCurrentIndex((i) => (i + 1) % imgs.length); return imgs; });
+  const goPrev = () => setFullscreenImages((imgs) => { setCurrentIndex((i) => (i - 1 + imgs.length) % imgs.length); return imgs; });
+
+  const openFullscreen = (imgs, idx = 0) => {
+    setFullscreenImages(imgs);
     setCurrentIndex(idx);
-    setIsFullscreen(true);
   };
 
-  const handleTabChange = (key) => {
-    setActiveTab(key);
-    setCurrentIndex(0);
+  // สร้าง cover grid (3 รูป)
+  const renderCoverGrid = () => {
+    const imgs = coverImgs.length > 0 ? coverImgs : allImgs.slice(0, 3);
+    if (imgs.length === 0) return null;
+
+    if (imgs.length === 1) {
+      return (
+        <div className="rounded-2xl overflow-hidden h-[300px] md:h-[500px]">
+          <div
+            className="relative cursor-pointer group h-full"
+            onClick={() => openFullscreen(imgs, 0)}
+          >
+            <img src={imgs[0]?.url} alt="Villa cover"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            <div className="image-overlay" />
+          </div>
+        </div>
+      );
+    }
+
+    if (imgs.length === 2) {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-2xl overflow-hidden h-[300px] md:h-[500px]">
+          {imgs.map((img, idx) => (
+            <div key={idx} className="relative cursor-pointer group"
+              onClick={() => openFullscreen(imgs, idx)}>
+              <img src={img.url} alt={`Villa cover ${idx + 1}`}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div className="image-overlay" />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // 3 รูป: 1 ใหญ่ซ้าย + 2 เล็กขวา
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 rounded-2xl overflow-hidden h-[300px] md:h-[500px]">
+        <div
+          className="md:col-span-2 relative cursor-pointer group"
+          onClick={() => openFullscreen(imgs, 0)}
+        >
+          <img src={imgs[0]?.url} alt="Villa cover"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          <div className="image-overlay" />
+        </div>
+        <div className="hidden md:grid grid-rows-2 gap-2">
+          {imgs.slice(1, 3).map((img, idx) => (
+            <div key={idx} className="relative cursor-pointer group"
+              onClick={() => openFullscreen(imgs, idx + 1)}>
+              <img src={img.url} alt={`Villa cover ${idx + 2}`}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div className="image-overlay" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // แสดงรูปแต่ละหมวด
+  const renderCategorySection = (catKey, catLabel, catIcon) => {
+    const catImgs = getByCategory(catKey);
+    if (catImgs.length === 0) return null;
+
+    return (
+      <div key={catKey} className="mt-8">
+        <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+          <span>{catIcon}</span> {catLabel}
+          <span className="text-sm font-normal text-gray-400">({catImgs.length} รูป)</span>
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 rounded-xl overflow-hidden">
+          {catImgs.map((img, idx) => (
+            <div key={idx}
+              className="relative cursor-pointer group aspect-[4/3] rounded-lg overflow-hidden"
+              onClick={() => openFullscreen(catImgs, idx)}>
+              <img src={img.url} alt={`${catLabel} ${idx + 1}`}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div className="image-overlay" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   return (
     <>
+      {/* ภาพปก */}
       <div className="relative">
-        {/* Category tabs */}
-        {hasCategories && availableTabs.length > 2 && (
-          <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
-            {availableTabs.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => handleTabChange(tab.key)}
-                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  activeTab === tab.key
-                    ? 'bg-primary-500 text-white shadow-md'
-                    : 'bg-white text-gray-600 hover:bg-gray-100 border'
-                }`}
-              >
-                {tab.label}
-                {tab.key !== 'all' && (
-                  <span className="ml-1 text-xs opacity-70">
-                    ({allImgs.filter((img) => img.category === tab.key).length})
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Main image grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 rounded-2xl overflow-hidden h-[300px] md:h-[500px]">
-          {/* Main large image */}
-          <div
-            className="md:col-span-2 md:row-span-2 relative cursor-pointer group"
-            onClick={() => openFullscreen(0)}
-          >
-            <img
-              src={imgs[0]?.url}
-              alt="Villa main"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-            <div className="image-overlay" />
-            {imgs[0]?.category && (
-              <div className="absolute bottom-3 left-3 bg-black/60 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">
-                {GALLERY_TABS.find((t) => t.key === imgs[0].category)?.label || ''}
-              </div>
-            )}
-          </div>
-
-          {/* Side images */}
-          {imgs.slice(1, 5).map((img, idx) => (
-            <div
-              key={idx}
-              className="hidden md:block relative cursor-pointer group"
-              onClick={() => openFullscreen(idx + 1)}
-            >
-              <img
-                src={img.url}
-                alt={`Villa ${idx + 2}`}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-              <div className="image-overlay" />
-              {idx === 3 && imgs.length > 5 && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-xl">
-                  +{imgs.length - 5} รูป
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* View all button */}
+        {renderCoverGrid()}
         <button
-          onClick={() => openFullscreen(0)}
+          onClick={() => openFullscreen(allImgs, 0)}
           className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm text-gray-700 px-4 py-2 rounded-lg font-medium flex items-center gap-2 hover:bg-white transition-colors shadow-lg"
         >
           <FiMaximize2 size={16} />
-          ดูรูปทั้งหมด ({imgs.length})
+          ดูรูปทั้งหมด ({allImgs.length})
         </button>
       </div>
 
+      {/* แต่ละหมวด (ไม่รวม cover) */}
+      {hasCategories && (
+        <div>
+          {CATEGORY_INFO.filter((c) => c.key !== 'cover').map((cat) =>
+            renderCategorySection(cat.key, cat.label, cat.icon)
+          )}
+          {/* รูปเก่าไม่มีหมวด */}
+          {uncategorized.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">📷 รูปอื่นๆ ({uncategorized.length} รูป)</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 rounded-xl overflow-hidden">
+                {uncategorized.map((img, idx) => (
+                  <div key={idx}
+                    className="relative cursor-pointer group aspect-[4/3] rounded-lg overflow-hidden"
+                    onClick={() => openFullscreen(uncategorized, idx)}>
+                    <img src={img.url} alt={`อื่นๆ ${idx + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <div className="image-overlay" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Fullscreen modal */}
-      {isFullscreen && (
+      {fullscreenImages && (
         <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center">
           <button
-            onClick={() => setIsFullscreen(false)}
+            onClick={() => setFullscreenImages(null)}
             className="absolute top-4 right-4 text-white p-2 hover:bg-white/10 rounded-full z-10"
           >
             <FiX size={28} />
@@ -162,15 +185,15 @@ export default function VillaGallery({ images = [] }) {
 
           <div className="max-w-5xl max-h-[85vh] mx-auto px-16">
             <img
-              src={imgs[currentIndex]?.url}
+              src={fullscreenImages[currentIndex]?.url}
               alt={`Villa ${currentIndex + 1}`}
               className="max-w-full max-h-[80vh] object-contain mx-auto rounded-lg"
             />
             <div className="text-center text-white mt-4">
-              <span>{currentIndex + 1} / {imgs.length}</span>
-              {imgs[currentIndex]?.category && (
+              <span>{currentIndex + 1} / {fullscreenImages.length}</span>
+              {fullscreenImages[currentIndex]?.category && (
                 <span className="ml-3 bg-white/20 px-3 py-1 rounded-full text-sm">
-                  {GALLERY_TABS.find((t) => t.key === imgs[currentIndex].category)?.label || ''}
+                  {CATEGORY_INFO.find((t) => t.key === fullscreenImages[currentIndex].category)?.label || ''}
                 </span>
               )}
             </div>
@@ -185,7 +208,7 @@ export default function VillaGallery({ images = [] }) {
 
           {/* Thumbnails */}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 overflow-x-auto max-w-[80vw] pb-2">
-            {imgs.map((img, idx) => (
+            {fullscreenImages.map((img, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentIndex(idx)}
